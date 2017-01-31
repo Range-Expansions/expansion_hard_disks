@@ -13,16 +13,49 @@ cimport cython
 import random
 from libc.math cimport atan2, sin, cos, sqrt, abs, floor
 import matplotlib.pyplot as plt
+from matplotlib import colors
 # from interval import interval, inf, imath
 import sys
 
 cdef float pi=np.pi
 
 # initial condition
-cdef public float r1=1
-cdef public float r2=1.2
+cdef float r1=1;
+cdef float r2=1.000001;
 
-positions=np.array([[0,0,r1],[2,0,r2]])
+cdef float R=50   # initial radius
+cdef float fraction=0.25   # initial fraction of occupied space
+
+cdef float origin=choice([r1,r2])
+cdef positions=np.array([[0,0,origin]])
+cdef frontier=np.array([])
+
+def initialize():
+    global positions
+    global frontier
+
+    # pi N = pi R^2/fraction
+    cdef float r, theta, x, y
+    cdef int i, q, t
+    for i in range(int((R**2)*fraction)):
+        t=0
+        while t==0:
+            r=random.uniform(0,R)
+            theta=random.uniform(0,2*pi)
+            x=r*cos(theta)
+            y=r*sin(theta)
+            t=1
+            for q in range(len(positions)):
+                if (positions[q][0]-x)**2+(positions[q][1]-y)**2<=4:
+                    t=0
+        positions=np.append(positions,[[x,y,choice([r1,r2])]],axis=0)
+
+    for pos in positions:
+        if is_at_frontier(pos)[1]:
+            if frontier.size==0:
+                frontier=pos
+            else:
+                frontier=np.vstack((frontier,pos))
 
 cdef int sign(float x) nogil:
     if x > 0:
@@ -73,7 +106,6 @@ def union(list set1, list set2):
             if setUL[k+1][1]>setUL[k][1]:
                 setU[l][1]=setUL[k+1][1]
     return setUL
-
 
 cpdef length(list interval):
     cdef float length=0
@@ -129,14 +161,6 @@ cpdef is_at_frontier(cur_loc):
             sets=intersection(sets,union([[0,min(theta1,theta2)]],[[max(theta1,theta2),2*pi]]))
 
     return sets, components(sets)>0
-
-frontier=np.array([])
-for pos in positions:
-    if is_at_frontier(pos)[1]:
-        if frontier.size==0:
-            frontier=pos
-        else:
-            frontier=np.vstack((frontier,pos))
 
 # checks if there is empty space in position new_loc where a new cell was placed
 # a new cell can only bother other cells within a distance of 4
