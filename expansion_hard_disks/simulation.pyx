@@ -242,7 +242,7 @@ cpdef display_coarse_grained_colony(int resolution):
     print 'done'
 
     cmap = colors.ListedColormap(['white','blue','red'])
-    bounds=[-0.5,r1-0.0001,r2-0.0001,r2+0.0001]
+    bounds=[0,r1,r2,r2+1]
     norm = colors.BoundaryNorm(bounds, cmap.N)
 
     plt.imshow(img, interpolation='none', origin='lower', cmap=cmap, norm=norm)
