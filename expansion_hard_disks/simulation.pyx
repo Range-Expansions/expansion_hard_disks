@@ -228,7 +228,6 @@ cpdef display_colony():
 cpdef display_coarse_grained_colony(int resolution):
     coordinates=concatenate((positions[:,1],positions[:,0]))
     px=int((max([abs(min(coordinates)),abs(max(coordinates))])+1)/resolution)
-    print px
     lx=min(positions[:,0])
     ly=min(positions[:,1])
     img=np.zeros((2*px+1,2*px+1))
@@ -239,10 +238,8 @@ cpdef display_coarse_grained_colony(int resolution):
         px2=(2+positions[i][1]-ly)/resolution
         img[int(floor(px1)),int(floor(px2))] = positions[i][2]
 
-    print 'done'
-
     cmap = colors.ListedColormap(['white','blue','red'])
-    bounds=[0,r1,r2,r2+1]
+    bounds=[-0.5,r1-(r2-r1)/2,r2-(r2-r1)/2,r2+1]
     norm = colors.BoundaryNorm(bounds, cmap.N)
 
     plt.imshow(img, interpolation='none', origin='lower', cmap=cmap, norm=norm)
