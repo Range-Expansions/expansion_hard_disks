@@ -196,8 +196,37 @@ cpdef prolonged_growth(T):
             print(100.*i/T)
 
 cpdef display_colony():
+    if shape(positions)[0]<20000:
+        display_colony_circles()
+    else:
+        display_coarse_grained_colony(4)
+
+cpdef display_coarse_grained_colony(int resolution):
+    coordinates=concatenate((positions[:,1],positions[:,0]))
+    px=int((max([abs(min(coordinates)),abs(max(coordinates))])+1)/resolution)
+    print px
+    lx=min(positions[:,0])
+    ly=min(positions[:,1])
+    img=np.zeros((2*px+1,2*px+1))
+
+    cdef int i
+    for i in range(shape(positions)[0]):
+        px1=(2+positions[i][0]-lx)/resolution
+        px2=(2+positions[i][1]-ly)/resolution
+        img[int(floor(px1)),int(floor(px2))] = positions[i][2]
+
+    print 'done'
+
+    cmap = colors.ListedColormap(['white','blue','red'])
+    bounds=[-0.5,r1-0.0001,r2-0.0001,r2+0.0001]
+    norm = colors.BoundaryNorm(bounds, cmap.N)
+
+    plt.imshow(img, interpolation='none', origin='lower', cmap=cmap, norm=norm)
+
+cpdef display_colony_circles():
     figure(figsize=(8,8))
     ax=subplot(aspect='equal')
+    cdef int i
     for i in range(shape(positions)[0]):
         if positions[i][2]==r1:
             ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='blue'))
