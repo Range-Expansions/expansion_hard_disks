@@ -27,7 +27,7 @@ cdef float R=50   # initial radius of the homeland
 cdef float fraction=0.25   # initial fraction of occupied space
 
 cdef float origin=choice([r1,r2])
-cdef positions=np.array([[0,0,origin]])
+cdef positions=np.array([])
 cdef frontier=np.array([])
 
 def initialize():
