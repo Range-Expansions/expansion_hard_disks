@@ -21,9 +21,9 @@ cdef float pi=np.pi
 
 # initial condition
 cdef float r1=1;
-cdef float r2=1.000001;
+cdef float r2=1.2;
 
-cdef float R=50   # initial radius of the homeland
+cdef float R=100   # initial radius of the homeland
 cdef float fraction=0.25   # initial fraction of occupied space
 
 cdef float origin=choice([r1,r2])
