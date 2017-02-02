@@ -23,7 +23,7 @@ cdef float pi=np.pi
 cdef float r1=1;
 cdef float r2=1.000001;
 
-cdef float R=50   # initial radius
+cdef float R=50   # initial radius of the homeland
 cdef float fraction=0.25   # initial fraction of occupied space
 
 cdef float origin=choice([r1,r2])
@@ -34,13 +34,31 @@ def initialize():
     global positions
     global frontier
 
-    # pi N = pi R^2/fraction
+    # # This section initializes a circular homeland
+    # # pi N = pi R^2/fraction
+    # cdef float r, theta, x, y
+    # cdef int i, q, t
+    # for i in range(int((R**2)*fraction)):
+    #     t=0
+    #     while t==0:
+    #         r=random.uniform(0,R)
+    #         theta=random.uniform(0,2*pi)
+    #         x=r*cos(theta)
+    #         y=r*sin(theta)
+    #         t=1
+    #         for q in range(len(positions)):
+    #             if (positions[q][0]-x)**2+(positions[q][1]-y)**2<=4:
+    #                 t=0
+    #     positions=np.append(positions,[[x,y,choice([r1,r2])]],axis=0)
+
+    # This section initializes a ring homeland
+    # pi N = pi (R^2-(0.8*R)^2)/fraction
     cdef float r, theta, x, y
     cdef int i, q, t
-    for i in range(int((R**2)*fraction)):
+    for i in range(int((R**2-(0.8*R)**2)*fraction)):
         t=0
         while t==0:
-            r=random.uniform(0,R)
+            r=random.uniform(0.8*R,R)
             theta=random.uniform(0,2*pi)
             x=r*cos(theta)
             y=r*sin(theta)
