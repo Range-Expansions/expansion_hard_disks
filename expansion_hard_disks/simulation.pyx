@@ -30,7 +30,7 @@ cdef float origin=choice([r1,r2])
 cdef positions=np.array([[0,0,origin]])
 cdef frontier=np.array([])
 
-def initialize():
+def initialize(float fraction):
     global positions
     global frontier
 
