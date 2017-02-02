@@ -27,7 +27,7 @@ cdef float R=50   # initial radius of the homeland
 cdef float fraction=0.25   # initial fraction of occupied space
 
 cdef float origin=choice([r1,r2])
-cdef positions=np.array([])
+cdef positions=np.array([[0,0,origin]])
 cdef frontier=np.array([])
 
 def initialize():
@@ -67,6 +67,8 @@ def initialize():
                 if (positions[q][0]-x)**2+(positions[q][1]-y)**2<=4:
                     t=0
         positions=np.append(positions,[[x,y,choice([r1,r2])]],axis=0)
+    # remove cell in the origin
+    positions=np.delete(positions,0,0)
 
     for pos in positions:
         if is_at_frontier(pos)[1]:
