@@ -22,8 +22,11 @@ cdef float pi=np.pi
 # initial condition
 cdef float r1=1;
 cdef float r2=1.2;
+cdef float time=0;
+cdef int n1=0;
+cdef int n2=0;
 
-cdef float R=100   # initial radius of the homeland
+cdef float R=200   # initial radius of the homeland
 cdef float fraction=0.25   # initial fraction of occupied space
 
 cdef float origin=choice([r1,r2])
@@ -55,10 +58,10 @@ def initialize(float fraction):
     # pi N = pi (R^2-(0.8*R)^2)/fraction
     cdef float r, theta, x, y
     cdef int i, q, t
-    for i in range(int((R**2-(0.8*R)**2)*fraction)):
+    for i in range(int((R**2-(0.9*R)**2)*fraction)):
         t=0
         while t==0:
-            r=random.uniform(0.8*R,R)
+            r=random.uniform(0.9*R,R)
             theta=random.uniform(0,2*pi)
             x=r*cos(theta)
             y=r*sin(theta)
@@ -212,6 +215,9 @@ cpdef update_frontier(new_loc):
 cpdef growth():
     # pick a random cell at the frontier
 #     parent=random.sample(frontier,1)[0]
+    n1=len(positions[:,2]==r1)
+    n2=len(positions)-n1
+    time += log(1/random.uniform(0,1))/(r1*n1+r2*n2)
     parent=frontier[np.random.choice(range(shape(frontier)[0]),1,p=frontier[:,2]/sum(frontier[:,2]))][0]
     availableTheta=is_at_frontier(parent)[0]
     cdef float thetaL=random.uniform(0,length(availableTheta))
@@ -240,6 +246,7 @@ cpdef prolonged_growth(T):
             print(100.*i/T)
 
 cpdef display_colony():
+    print time
     if shape(positions)[0]<20000:
         display_colony_circles()
     else:
