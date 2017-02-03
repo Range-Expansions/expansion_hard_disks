@@ -20,9 +20,9 @@ import sys
 cdef float pi=np.pi
 
 # initial condition
-cdef float r1=1;
-cdef float r2=1.25;
+cdef grates=np.array([1,1.2]);
 cdef float time=0;
+cdef float t_switch=2.5;
 cdef int switch=0
 cdef int n1=0;
 cdef int n2=0;
@@ -30,8 +30,8 @@ cdef int n2=0;
 cdef float R=100   # initial radius of the homeland
 cdef float fraction=0.25   # initial fraction of occupied space
 
-cdef float origin=choice([r1,r2])
-cdef positions=np.array([[0,0,origin]])
+cdef int origin=choice([0,1])
+cdef positions=np.array([[0,0,origin,grates[origin]]])
 cdef frontier=np.array([])
 
 def initialize_disk(float fraction):
@@ -53,7 +53,8 @@ def initialize_disk(float fraction):
             for q in range(len(positions)):
                 if (positions[q][0]-x)**2+(positions[q][1]-y)**2<=4:
                     t=0
-        positions=np.append(positions,[[x,y,choice([r1,r2])]],axis=0)
+        species=choice([0,1])
+        positions=np.append(positions,[[x,y,species,grates[species]]],axis=0)
 
     for pos in positions:
         if is_at_frontier(pos)[1]:
@@ -81,7 +82,8 @@ def initialize_ring(float fraction):
             for q in range(len(positions)):
                 if (positions[q][0]-x)**2+(positions[q][1]-y)**2<=4:
                     t=0
-        positions=np.append(positions,[[x,y,choice([r1,r2])]],axis=0)
+        species=choice([0,1])
+        positions=np.append(positions,[[x,y,species,grates[species]]],axis=0)
     # remove cell in the origin
     positions=np.delete(positions,0,0)
     # populates interior of the ring with a sixth of the ring density
@@ -96,7 +98,8 @@ def initialize_ring(float fraction):
             for q in range(len(positions)):
                 if (positions[q][0]-x)**2+(positions[q][1]-y)**2<=4:
                     t=0
-        positions=np.append(positions,[[x,y,choice([r1,r2])]],axis=0)
+        species=choice([0,1])
+        positions=np.append(positions,[[x,y,species,grates[species]]],axis=0)
 
     for pos in positions:
         if is_at_frontier(pos)[1]:
@@ -238,25 +241,30 @@ cpdef update_frontier(new_loc):
 
 cpdef disp_variables():
         print time
-        print r1
-        print r2
+        print grates[0]
+        print grates[1]
         print('-----')
 
 # growth step
 cpdef growth():
-    global time, switch, r1, r2
-    if time>3 and switch==0:
-        temp=r1
-        r1=1.5
-        r2=1
+    global time, switch, grates, frontier, positions
+    cdef float totW
+    cdef int q
+    if time>t_switch and switch==0:
+        grates=[1.5,1]
         switch=1
+        for q in range(shape(positions)[0]):
+            positions[q][3]=grates[int(positions[q][2])]
+        for q in range(shape(frontier)[0]):
+            frontier[q][3]=grates[int(frontier[q][2])]
         print 'switched'
     # pick a random cell at the frontier
 #     parent=random.sample(frontier,1)[0]
-    n1=len(positions[:,2]==r1)
+    n1=len(positions[:,2]==0)
     n2=len(positions)-n1
-    time += log(1/random.uniform(0,1))/(r1*n1+r2*n2)
-    parent=frontier[np.random.choice(range(shape(frontier)[0]),1,p=frontier[:,2]/sum(frontier[:,2]))][0]
+
+    time += log(1/random.uniform(0,1))/(n1*grates[0]+n2*grates[1])
+    parent=frontier[np.random.choice(range(shape(frontier)[0]),1,p=frontier[:,3]/sum(frontier[:,3]))][0]
     availableTheta=is_at_frontier(parent)[0]
     cdef float thetaL=random.uniform(0,length(availableTheta))
 
@@ -272,7 +280,7 @@ cpdef growth():
         else:
             thetaL=thetaL-length([availableTheta[i]])
 
-    new_loc=[parent[0]+2*cos(theta),parent[1]+2*sin(theta),parent[2]]
+    new_loc=[parent[0]+2*cos(theta),parent[1]+2*sin(theta),parent[2],parent[3]]
 
     update_frontier(new_loc)
 
@@ -297,7 +305,7 @@ cpdef display_coarse_grained_colony(int resolution):
     px=int((max([abs(min(coordinates)),abs(max(coordinates))])+1)/resolution)
     lx=min(positions[:,0])
     ly=min(positions[:,1])
-    img=np.zeros((2*px+1,2*px+1))
+    img=np.zeros((2*px+1,2*px+1))-1
 
     cdef int i
     for i in range(shape(positions)[0]):
@@ -305,12 +313,9 @@ cpdef display_coarse_grained_colony(int resolution):
         px2=(2+positions[i][1]-ly)/resolution
         img[int(floor(px1)),int(floor(px2))] = positions[i][2]
 
-    if r1<r2:
-        cmap = colors.ListedColormap(['white','blue','red'])
-        bounds=[0,r1,r2,r2+1]
-    else:
-        cmap = colors.ListedColormap(['white','blue','red'])
-        bounds=[0,r2,r1,r1+1]
+    cmap = colors.ListedColormap(['white','blue','red'])
+    bounds=[-1.5,-0.5,0.5,1.5]
+
     norm = colors.BoundaryNorm(bounds, cmap.N)
 
     plt.imshow(img, interpolation='none', origin='lower', cmap=cmap, norm=norm)
@@ -319,18 +324,11 @@ cpdef display_colony_circles():
     figure(figsize=(8,8))
     ax=subplot(aspect='equal')
     cdef int i
-    if r1<r2:
-        for i in range(shape(positions)[0]):
-            if positions[i][2]==r1:
-                ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='blue'))
-            else:
-                ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='red'))
-    else:
-        for i in range(shape(positions)[0]):
-            if positions[i][2]==r1:
-                ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='red'))
-            else:
-                ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='blue'))
+    for i in range(shape(positions)[0]):
+        if positions[i][2]==0:
+            ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='blue'))
+        else:
+            ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='red'))
     coordinates=concatenate((positions[:,1],positions[:,0]))
     xlim(min(coordinates)-2,max(coordinates)+2)
     ylim(min(coordinates)-2,max(coordinates)+2)
