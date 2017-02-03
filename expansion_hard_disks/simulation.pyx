@@ -21,7 +21,7 @@ cdef float pi=np.pi
 
 # initial condition
 cdef grates=np.array([1,1.2]);  # growth rates vector --- can be changed in time
-cdef float time=0;  # real time in generation units
+cdef float time=0;  # real time in units of 1/r1 (r1 is initially set to 1)
 cdef float t_switch=4;  # time at which the environment switches
 
 cdef float R=100   # initial radius of the homeland (in units of cell radius)
@@ -297,8 +297,8 @@ cpdef switch_grates():
 # Performs one growth step, i.e. one cell division
 cpdef growth():
     global time
-    if time>t_switch and switch==0:
-        switch_grates()
+    # if time>t_switch and switch==0:
+    #     switch_grates()
 
     n1=len(positions[:,2]==0)   # updates tot number of cells of species 1
     n2=len(positions)-n1   # updates tot number of cells of species 2
