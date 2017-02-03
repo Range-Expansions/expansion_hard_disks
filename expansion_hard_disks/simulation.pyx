@@ -22,21 +22,24 @@ cdef float pi=np.pi
 # initial condition
 cdef grates=np.array([1,1.2]);
 cdef float time=0;
-cdef float t_switch=2.5;
+cdef float t_switch=4;
 cdef int switch=0
 cdef int n1=0;
 cdef int n2=0;
 
 cdef float R=100   # initial radius of the homeland
 cdef float fraction=0.25   # initial fraction of occupied space
+cdef float ratio=0.95    # initial ratio of species 1 vs species 2
 
-cdef int origin=choice([0,1])
-cdef positions=np.array([[0,0,origin,grates[origin]]])
+cdef int origin=np.random.choice([0,1],1,p=[ratio,1-ratio])
+cdef positions=np.array([[0,0,origin]])
 cdef frontier=np.array([])
 
 def initialize_disk(float fraction):
     global positions
     global frontier
+    positions=np.array([[0,0,origin]])
+    frontier=np.array([])
 
     # This section initializes a circular homeland
     # pi N = pi R^2/fraction
@@ -53,19 +56,21 @@ def initialize_disk(float fraction):
             for q in range(len(positions)):
                 if (positions[q][0]-x)**2+(positions[q][1]-y)**2<=4:
                     t=0
-        species=choice([0,1])
-        positions=np.append(positions,[[x,y,species,grates[species]]],axis=0)
+        species=np.random.choice([0,1],1,p=[ratio,1-ratio])
+        positions=np.append(positions,[[x,y,species]],axis=0)
 
     for pos in positions:
         if is_at_frontier(pos)[1]:
             if frontier.size==0:
-                frontier=pos
+                frontier=np.append(pos,grates[int(pos[2])])
             else:
-                frontier=np.vstack((frontier,pos))
+                frontier=np.vstack((frontier,np.append(pos,grates[int(pos[2])])))
 
 def initialize_ring(float fraction):
     global positions
     global frontier
+    positions=np.array([[0,0,origin]])
+    frontier=np.array([])
 
     # This section initializes a ring homeland with a few scattered cells in the interior
     # pi N = pi (R^2-(0.8*R)^2)/fraction
@@ -82,8 +87,8 @@ def initialize_ring(float fraction):
             for q in range(len(positions)):
                 if (positions[q][0]-x)**2+(positions[q][1]-y)**2<=4:
                     t=0
-        species=choice([0,1])
-        positions=np.append(positions,[[x,y,species,grates[species]]],axis=0)
+        species=np.random.choice([0,1],1,p=[ratio,1-ratio])
+        positions=np.append(positions,[[x,y,species]],axis=0)
     # remove cell in the origin
     positions=np.delete(positions,0,0)
     # populates interior of the ring with a sixth of the ring density
@@ -98,15 +103,15 @@ def initialize_ring(float fraction):
             for q in range(len(positions)):
                 if (positions[q][0]-x)**2+(positions[q][1]-y)**2<=4:
                     t=0
-        species=choice([0,1])
-        positions=np.append(positions,[[x,y,species,grates[species]]],axis=0)
+        species=np.random.choice([0,1],1,p=[ratio,1-ratio])
+        positions=np.append(positions,[[x,y,species]],axis=0)
 
     for pos in positions:
         if is_at_frontier(pos)[1]:
             if frontier.size==0:
-                frontier=pos
+                frontier=np.append(pos,grates[int(pos[2])])
             else:
-                frontier=np.vstack((frontier,pos))
+                frontier=np.vstack((frontier,np.append(pos,grates[int(pos[2])])))
 
 cdef int sign(float x) nogil:
     if x > 0:
@@ -221,7 +226,10 @@ cpdef update_frontier(new_loc):
     positions=np.append(positions,[new_loc],axis=0)
 
     if is_at_frontier(new_loc)[1]:
-        frontier=np.vstack((frontier,new_loc))
+        # print new_loc
+        # frontier=np.vstack((frontier,new_loc))
+        frontier=np.vstack((frontier,np.append(new_loc,grates[int(new_loc[2])])))
+
     # Find cells that can impede growth (those within distance 4)
     closeby_cells=(positions[:,0]-new_loc[0])**2+(positions[:,1]-new_loc[1])**2<=4**2
     closeby_positions=positions[closeby_cells]
@@ -237,13 +245,19 @@ cpdef update_frontier(new_loc):
     remove=where(np.logical_not(in_frontier))
     if size(remove)>0:
         for i in range(size(remove)):
-            frontier=np.delete(frontier,(np.where((frontier==closeby_positions[remove[0][i]]).all(axis=1))),axis=0)
+            frontier=np.delete(frontier,(np.where((frontier==np.append(closeby_positions[remove[0][i]],grates[int(closeby_positions[remove[0][i]][2])])).all(axis=1))),axis=0)
 
-cpdef disp_variables():
+cpdef print_variables():
         print time
         print grates[0]
         print grates[1]
         print('-----')
+
+cpdef print_frontier():
+        print frontier
+
+cpdef print_positions():
+        print positions
 
 # growth step
 cpdef growth():
@@ -251,13 +265,11 @@ cpdef growth():
     cdef float totW
     cdef int q
     if time>t_switch and switch==0:
-        grates=[1.5,1]
+        grates=[1.5,1.0]
         switch=1
-        for q in range(shape(positions)[0]):
-            positions[q][3]=grates[int(positions[q][2])]
         for q in range(shape(frontier)[0]):
             frontier[q][3]=grates[int(frontier[q][2])]
-        print 'switched'
+        print 'Switched growth rates'
     # pick a random cell at the frontier
 #     parent=random.sample(frontier,1)[0]
     n1=len(positions[:,2]==0)
@@ -280,7 +292,7 @@ cpdef growth():
         else:
             thetaL=thetaL-length([availableTheta[i]])
 
-    new_loc=[parent[0]+2*cos(theta),parent[1]+2*sin(theta),parent[2],parent[3]]
+    new_loc=[parent[0]+2*cos(theta),parent[1]+2*sin(theta),parent[2]]
 
     update_frontier(new_loc)
 
@@ -326,9 +338,10 @@ cpdef display_colony_circles():
     cdef int i
     for i in range(shape(positions)[0]):
         if positions[i][2]==0:
-            ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='blue'))
+            ax.add_artist(plt.Circle([positions[i][1],positions[i][0]], 1, alpha=0.5, color='blue'))
         else:
-            ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='red'))
+            # ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='red'))
+            ax.add_artist(plt.Circle([positions[i][1],positions[i][0]], 1, alpha=0.5, color='red'))
     coordinates=concatenate((positions[:,1],positions[:,0]))
     xlim(min(coordinates)-2,max(coordinates)+2)
     ylim(min(coordinates)-2,max(coordinates)+2)
