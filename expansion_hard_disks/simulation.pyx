@@ -21,47 +21,59 @@ cdef float pi=np.pi
 
 # initial condition
 cdef float r1=1;
-cdef float r2=1.2;
+cdef float r2=1.25;
 cdef float time=0;
+cdef int switch=0
 cdef int n1=0;
 cdef int n2=0;
 
-cdef float R=200   # initial radius of the homeland
+cdef float R=100   # initial radius of the homeland
 cdef float fraction=0.25   # initial fraction of occupied space
 
 cdef float origin=choice([r1,r2])
 cdef positions=np.array([[0,0,origin]])
 cdef frontier=np.array([])
 
-def initialize(float fraction):
+def initialize_disk(float fraction):
     global positions
     global frontier
 
-    # # This section initializes a circular homeland
-    # # pi N = pi R^2/fraction
-    # cdef float r, theta, x, y
-    # cdef int i, q, t
-    # for i in range(int((R**2)*fraction)):
-    #     t=0
-    #     while t==0:
-    #         r=random.uniform(0,R)
-    #         theta=random.uniform(0,2*pi)
-    #         x=r*cos(theta)
-    #         y=r*sin(theta)
-    #         t=1
-    #         for q in range(len(positions)):
-    #             if (positions[q][0]-x)**2+(positions[q][1]-y)**2<=4:
-    #                 t=0
-    #     positions=np.append(positions,[[x,y,choice([r1,r2])]],axis=0)
+    # This section initializes a circular homeland
+    # pi N = pi R^2/fraction
+    cdef float r, theta, x, y
+    cdef int i, q, t
+    for i in range(int((R**2)*fraction)):
+        t=0
+        while t==0:
+            r=R*sqrt(random.uniform(0,1))   # in this way points are distributed uniformly in the homeland
+            theta=random.uniform(0,2*pi)
+            x=r*cos(theta)
+            y=r*sin(theta)
+            t=1
+            for q in range(len(positions)):
+                if (positions[q][0]-x)**2+(positions[q][1]-y)**2<=4:
+                    t=0
+        positions=np.append(positions,[[x,y,choice([r1,r2])]],axis=0)
 
-    # This section initializes a ring homeland
+    for pos in positions:
+        if is_at_frontier(pos)[1]:
+            if frontier.size==0:
+                frontier=pos
+            else:
+                frontier=np.vstack((frontier,pos))
+
+def initialize_ring(float fraction):
+    global positions
+    global frontier
+
+    # This section initializes a ring homeland with a few scattered cells in the interior
     # pi N = pi (R^2-(0.8*R)^2)/fraction
     cdef float r, theta, x, y
     cdef int i, q, t
     for i in range(int((R**2-(0.9*R)**2)*fraction)):
         t=0
         while t==0:
-            r=random.uniform(0.9*R,R)
+            r=0.9*R+0.1*R*sqrt(random.uniform(0,1))
             theta=random.uniform(0,2*pi)
             x=r*cos(theta)
             y=r*sin(theta)
@@ -72,6 +84,19 @@ def initialize(float fraction):
         positions=np.append(positions,[[x,y,choice([r1,r2])]],axis=0)
     # remove cell in the origin
     positions=np.delete(positions,0,0)
+    # populates interior of the ring with a sixth of the ring density
+    for i in range(int((0.9*R)**2*fraction/6)):
+        t=0
+        while t==0:
+            r=0.9*R*sqrt(random.uniform(0,1))
+            theta=random.uniform(0,2*pi)
+            x=r*cos(theta)
+            y=r*sin(theta)
+            t=1
+            for q in range(len(positions)):
+                if (positions[q][0]-x)**2+(positions[q][1]-y)**2<=4:
+                    t=0
+        positions=np.append(positions,[[x,y,choice([r1,r2])]],axis=0)
 
     for pos in positions:
         if is_at_frontier(pos)[1]:
@@ -211,8 +236,21 @@ cpdef update_frontier(new_loc):
         for i in range(size(remove)):
             frontier=np.delete(frontier,(np.where((frontier==closeby_positions[remove[0][i]]).all(axis=1))),axis=0)
 
+cpdef disp_variables():
+        print time
+        print r1
+        print r2
+        print('-----')
+
 # growth step
 cpdef growth():
+    global time, switch, r1, r2
+    if time>3 and switch==0:
+        temp=r1
+        r1=1.5
+        r2=1
+        switch=1
+        print 'switched'
     # pick a random cell at the frontier
 #     parent=random.sample(frontier,1)[0]
     n1=len(positions[:,2]==r1)
@@ -242,11 +280,13 @@ cpdef prolonged_growth(T):
     cdef int i
     for i in range(1,T):
         growth()
-        if mod(i,floor(T/10))==0:
-            print(100.*i/T)
+        if mod(i+1,floor(T/10))==0:
+            print 'Completion: ',100.*(i+1)/T,'% - Time: ',time
+            # disp_variables()
 
 cpdef display_colony():
-    print time
+    global time
+    # print time
     if shape(positions)[0]<20000:
         display_colony_circles()
     else:
@@ -265,8 +305,12 @@ cpdef display_coarse_grained_colony(int resolution):
         px2=(2+positions[i][1]-ly)/resolution
         img[int(floor(px1)),int(floor(px2))] = positions[i][2]
 
-    cmap = colors.ListedColormap(['white','blue','red'])
-    bounds=[0,r1,r2,r2+1]
+    if r1<r2:
+        cmap = colors.ListedColormap(['white','blue','red'])
+        bounds=[0,r1,r2,r2+1]
+    else:
+        cmap = colors.ListedColormap(['white','blue','red'])
+        bounds=[0,r2,r1,r1+1]
     norm = colors.BoundaryNorm(bounds, cmap.N)
 
     plt.imshow(img, interpolation='none', origin='lower', cmap=cmap, norm=norm)
@@ -275,11 +319,18 @@ cpdef display_colony_circles():
     figure(figsize=(8,8))
     ax=subplot(aspect='equal')
     cdef int i
-    for i in range(shape(positions)[0]):
-        if positions[i][2]==r1:
-            ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='blue'))
-        else:
-            ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='red'))
+    if r1<r2:
+        for i in range(shape(positions)[0]):
+            if positions[i][2]==r1:
+                ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='blue'))
+            else:
+                ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='red'))
+    else:
+        for i in range(shape(positions)[0]):
+            if positions[i][2]==r1:
+                ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='red'))
+            else:
+                ax.add_artist(plt.Circle(positions[i][0:2], 1, alpha=0.5, color='blue'))
     coordinates=concatenate((positions[:,1],positions[:,0]))
     xlim(min(coordinates)-2,max(coordinates)+2)
     ylim(min(coordinates)-2,max(coordinates)+2)
