@@ -307,7 +307,7 @@ cpdef prolonged_growth(T):
 cpdef display_colony():
     global time
     # print time
-    if shape(positions)[0]<20000:
+    if shape(positions)[0]<50000:
         display_colony_circles()
     else:
         display_coarse_grained_colony(4)
