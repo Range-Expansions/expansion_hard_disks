@@ -297,13 +297,14 @@ cpdef switch_grates():
 # Performs one growth step, i.e. one cell division
 cpdef growth():
     global time
-    # if time>t_switch and switch==0:
-    #     switch_grates()
+    if time>t_switch and switch==0:
+        switch_grates()
 
     n1=len(positions[:,2]==0)   # updates tot number of cells of species 1
     n2=len(positions)-n1   # updates tot number of cells of species 2
 
-    # updates the real time
+    # updates the real time -- computes time to the next division
+    # see Gillespie, DT, Annu. Rev. Phys. Chem. 2007 58:35-55 for an explanation of this line
     time += log(1/random.uniform(0,1))/(n1*grates[0]+n2*grates[1])
 
     # selects the parent cell at the frontier according to the different growth rates
